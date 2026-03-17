@@ -408,27 +408,36 @@ public class BookShop extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
     private void showBookPopup(String bookName) {
-        try (Connection conn = config.connectDB();
-                PreparedStatement pst = conn.prepareStatement(
-                        "SELECT * FROM tbl_books WHERE b_name = ?")) {
+    try (Connection conn = config.connectDB();
+            PreparedStatement pst = conn.prepareStatement(
+                    "SELECT * FROM tbl_books WHERE b_name = ?")) {
 
-            pst.setString(1, bookName);
+        pst.setString(1, bookName);
 
-            try (ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    String author = rs.getString("b_author");
-                    String date = rs.getString("b_date");
-                    String price = rs.getString("b_price");
-                    String stock = rs.getString("b_stock");
-                    String imagePath = rs.getString("b_image");
+        try (ResultSet rs = pst.executeQuery()) {
+            if (rs.next()) {
+                String author = rs.getString("b_author");
+                String date = rs.getString("b_date");
+                String price = rs.getString("b_price");
+                String stock = rs.getString("b_stock");
+                String imagePath = rs.getString("b_image");
 
-                    showBookDialog(bookName, author, date, price, stock, imagePath);
+                // ✅ Check if out of stock BEFORE showing dialog
+                if (Integer.parseInt(stock) <= 0) {
+                    JOptionPane.showMessageDialog(this,
+                        "'" + bookName + "' is currently OUT OF STOCK!",
+                        "Out of Stock",
+                        JOptionPane.WARNING_MESSAGE);
+                    return; // ✅ stop here, don't show popup
                 }
+
+                showBookDialog(bookName, author, date, price, stock, imagePath);
             }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
         }
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
     }
+}
 
     private void showBookDialog(String bookName, String author, String date,
             String price, String stock, String imagePath) {

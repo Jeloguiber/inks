@@ -30,162 +30,189 @@ public class checkout extends javax.swing.JFrame {
         jTextField4.setEditable(false);
         calculateTotal();
     }
-   private void calculateTotal() {
-    double total = 0;
-    for (int i = 0; i < tbl2.getRowCount(); i++) {
-        try {
-            // Remove '₱' or spaces if they exist in your price column
-            String priceStr = tbl2.getValueAt(i, 2).toString().replace("₱", "").trim();
-            int qty = Integer.parseInt(tbl2.getValueAt(i, 1).toString());
-            total += Double.parseDouble(priceStr) * qty;
-        } catch (Exception e) {
-            System.out.println("Error calculating row: " + e.getMessage());
-        }
-    }
-    jTextField4.setText("Total: ₱" + String.format("%.2f", total));
-}
-   private void processCashOrder() {
-    String fullName = jTextField1.getText();
-    String address = jTextField3.getText();
-    String contact = jTextField2.getText();
 
-    if (fullName.isEmpty() || address.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Please provide Name and Shipping Address.");
-        return;
-    }
-
-    try (java.sql.Connection conn = config.config.connectDB()) {
-        // 1. Insert into tbl_orders
-        String sqlOrder = "INSERT INTO tbl_orders (u_id, o_total) VALUES (?, ?)";
-        java.sql.PreparedStatement pstOrder = conn.prepareStatement(sqlOrder, java.sql.Statement.RETURN_GENERATED_KEYS);
-        
-        pstOrder.setInt(1, userId); // Temporary: assumes user ID 1
-        String totalClean = jTextField4.getText().replace("Total: ₱", "").trim();
-        pstOrder.setDouble(2, Double.parseDouble(totalClean));
-        pstOrder.executeUpdate();
-
-        // Get the Order ID
-        java.sql.ResultSet rs = pstOrder.getGeneratedKeys();
-        if (rs.next()) {
-            int orderId = rs.getInt(1);
-
-            // 2. Loop through table and save to tbl_order_items
-            String sqlItems = "INSERT INTO tbl_order_items (o_id, b_name, oi_qty, oi_price) VALUES (?, ?, ?, ?)";
-            java.sql.PreparedStatement pstItems = conn.prepareStatement(sqlItems);
-
-            for (int i = 0; i < tbl2.getRowCount(); i++) {
-                pstItems.setInt(1, orderId);
-                pstItems.setString(2, tbl2.getValueAt(i, 0).toString());
-                pstItems.setInt(3, Integer.parseInt(tbl2.getValueAt(i, 1).toString()));
-                String itemPrice = tbl2.getValueAt(i, 2).toString().replace("₱", "").trim();
-                pstItems.setDouble(4, Double.parseDouble(itemPrice));
-                pstItems.addBatch();
+    private void calculateTotal() {
+        double total = 0;
+        for (int i = 0; i < tbl2.getRowCount(); i++) {
+            try {
+                // Remove '₱' or spaces if they exist in your price column
+                String priceStr = tbl2.getValueAt(i, 2).toString().replace("₱", "").trim();
+                int qty = Integer.parseInt(tbl2.getValueAt(i, 1).toString());
+                total += Double.parseDouble(priceStr) * qty;
+            } catch (Exception e) {
+                System.out.println("Error calculating row: " + e.getMessage());
             }
-            pstItems.executeBatch();
-
-            JOptionPane.showMessageDialog(this, "Order Confirmed! Please prepare Cash on Delivery.");
-            
-            // Clear cart and close
-            dashboard.CartManager.sharedModel.setRowCount(0);
-            this.dispose();
         }
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Error processing order: " + e.getMessage());
+        jTextField4.setText("Total: ₱" + String.format("%.2f", total));
     }
-}
-   
-  private void saveOrderToDatabase() {
-    String sqlOrder = "INSERT INTO tbl_orders (u_id, o_total) VALUES (?, ?)";
-    String sqlItems = "INSERT INTO tbl_order_items (o_id, b_name, oi_qty, oi_price) VALUES (?, ?, ?, ?)";
 
-    try (Connection conn = config.config.connectDB();
-         PreparedStatement pstOrder = conn.prepareStatement(sqlOrder, Statement.RETURN_GENERATED_KEYS)) {
+    private void processCashOrder() {
+        String fullName = jTextField1.getText();
+        String address = jTextField3.getText();
+        String contact = jTextField2.getText();
 
-        pstOrder.setInt(1, userId); // ✅ use userId field, NOT hardcoded 1
-        double total = Double.parseDouble(jTextField4.getText().replace("Total: ₱", "").trim());
-        pstOrder.setDouble(2, total);
-        pstOrder.executeUpdate();
+        if (fullName.isEmpty() || address.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please provide Name and Shipping Address.");
+            return;
+        }
 
-        try (ResultSet rs = pstOrder.getGeneratedKeys()) {
+        try (java.sql.Connection conn = config.config.connectDB()) {
+            // 1. Insert into tbl_orders
+            String sqlOrder = "INSERT INTO tbl_orders (u_id, o_total) VALUES (?, ?)";
+            java.sql.PreparedStatement pstOrder = conn.prepareStatement(sqlOrder, java.sql.Statement.RETURN_GENERATED_KEYS);
+
+            pstOrder.setInt(1, userId); // Temporary: assumes user ID 1
+            String totalClean = jTextField4.getText().replace("Total: ₱", "").trim();
+            pstOrder.setDouble(2, Double.parseDouble(totalClean));
+            pstOrder.executeUpdate();
+
+            // Get the Order ID
+            java.sql.ResultSet rs = pstOrder.getGeneratedKeys();
             if (rs.next()) {
                 int orderId = rs.getInt(1);
-                try (PreparedStatement pstItems = conn.prepareStatement(sqlItems)) {
-                    for (int i = 0; i < tbl2.getRowCount(); i++) {
-                        pstItems.setInt(1, orderId);
-                        pstItems.setString(2, tbl2.getValueAt(i, 0).toString());
-                        pstItems.setInt(3, Integer.parseInt(tbl2.getValueAt(i, 1).toString()));
-                        pstItems.setDouble(4, Double.parseDouble(
-                            tbl2.getValueAt(i, 2).toString().replace("₱", "").trim()));
-                        pstItems.addBatch();
+
+                // 2. Loop through table and save to tbl_order_items
+                String sqlItems = "INSERT INTO tbl_order_items (o_id, b_name, oi_qty, oi_price) VALUES (?, ?, ?, ?)";
+                java.sql.PreparedStatement pstItems = conn.prepareStatement(sqlItems);
+
+                for (int i = 0; i < tbl2.getRowCount(); i++) {
+                    pstItems.setInt(1, orderId);
+                    pstItems.setString(2, tbl2.getValueAt(i, 0).toString());
+                    pstItems.setInt(3, Integer.parseInt(tbl2.getValueAt(i, 1).toString()));
+                    String itemPrice = tbl2.getValueAt(i, 2).toString().replace("₱", "").trim();
+                    pstItems.setDouble(4, Double.parseDouble(itemPrice));
+                    pstItems.addBatch();
+                }
+                pstItems.executeBatch();
+
+                JOptionPane.showMessageDialog(this, "Order Confirmed! Please prepare Cash on Delivery.");
+
+                // Clear cart and close
+                dashboard.CartManager.sharedModel.setRowCount(0);
+                this.dispose();
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error processing order: " + e.getMessage());
+        }
+    }
+
+    private void saveOrderToDatabase() {
+        String sqlOrder = "INSERT INTO tbl_orders (u_id, o_total) VALUES (?, ?)";
+        String sqlItems = "INSERT INTO tbl_order_items (o_id, b_name, oi_qty, oi_price) VALUES (?, ?, ?, ?)";
+        String sqlStock = "UPDATE tbl_books SET b_stock = b_stock - ? WHERE b_name = ?"; // ✅ added
+
+        try (Connection conn = config.config.connectDB();
+                PreparedStatement pstOrder = conn.prepareStatement(sqlOrder, Statement.RETURN_GENERATED_KEYS)) {
+
+            conn.setAutoCommit(false); // ✅ transaction
+
+            pstOrder.setInt(1, userId);
+            double total = Double.parseDouble(jTextField4.getText().replace("Total: ₱", "").trim());
+            pstOrder.setDouble(2, total);
+            pstOrder.executeUpdate();
+
+            try (ResultSet rs = pstOrder.getGeneratedKeys()) {
+                if (rs.next()) {
+                    int orderId = rs.getInt(1);
+
+                    try (PreparedStatement pstItems = conn.prepareStatement(sqlItems);
+                            PreparedStatement pstStock = conn.prepareStatement(sqlStock)) { // ✅
+
+                        for (int i = 0; i < tbl2.getRowCount(); i++) {
+                            String bookName = tbl2.getValueAt(i, 0).toString();
+                            int qty = Integer.parseInt(tbl2.getValueAt(i, 1).toString());
+                            double price = Double.parseDouble(
+                                    tbl2.getValueAt(i, 2).toString().replace("₱", "").trim());
+
+                            // Save order item
+                            pstItems.setInt(1, orderId);
+                            pstItems.setString(2, bookName);
+                            pstItems.setInt(3, qty);
+                            pstItems.setDouble(4, price);
+                            pstItems.addBatch();
+
+                            // ✅ Deduct stock
+                            pstStock.setInt(1, qty);
+                            pstStock.setString(2, bookName);
+                            pstStock.addBatch();
+                        }
+                        pstItems.executeBatch();
+                        pstStock.executeBatch(); // ✅ stock updated
                     }
-                    pstItems.executeBatch();
                 }
             }
+
+            conn.commit(); // ✅ save all together
+            dashboard.CartManager.sharedModel.setRowCount(0);
+            System.out.println("Order saved and stock deducted.");
+            if (dashboard.admin.instance != null) {
+                dashboard.admin.instance.refreshAll();
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database Error: " + e.getMessage());
         }
-        dashboard.CartManager.sharedModel.setRowCount(0);
-
-    } catch (SQLException e) {
-        JOptionPane.showMessageDialog(this, "Database Lock Error: " + e.getMessage());
     }
-}
-  private void showCashPopup() {
-    String totalStr = jTextField4.getText().replace("Total: ₱", "").trim();
-    double totalToPay = Double.parseDouble(totalStr);
 
-    javax.swing.JDialog cashDialog = new javax.swing.JDialog(this, "Cash Payment", true);
-    cashDialog.setSize(300, 250);
-    cashDialog.setLocationRelativeTo(this);
-    cashDialog.setLayout(null);
+    private void showCashPopup() {
+        String totalStr = jTextField4.getText().replace("Total: ₱", "").trim();
+        double totalToPay = Double.parseDouble(totalStr);
 
-    JLabel lblTotal = new JLabel("Total: ₱" + String.format("%.2f", totalToPay));
-    lblTotal.setBounds(30, 20, 200, 30);
-    lblTotal.setFont(new java.awt.Font("Segoe UI", 1, 16));
-    cashDialog.add(lblTotal);
+        javax.swing.JDialog cashDialog = new javax.swing.JDialog(this, "Cash Payment", true);
+        cashDialog.setSize(300, 250);
+        cashDialog.setLocationRelativeTo(this);
+        cashDialog.setLayout(null);
 
-    JLabel lblAmount = new JLabel("Enter Cash Amount:");
-    lblAmount.setBounds(30, 60, 200, 30);
-    cashDialog.add(lblAmount);
+        JLabel lblTotal = new JLabel("Total: ₱" + String.format("%.2f", totalToPay));
+        lblTotal.setBounds(30, 20, 200, 30);
+        lblTotal.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        cashDialog.add(lblTotal);
 
-    javax.swing.JTextField cashInput = new javax.swing.JTextField();
-    cashInput.setBounds(30, 90, 220, 40);
-    cashInput.setFont(new java.awt.Font("Segoe UI", 1, 18));
-    cashDialog.add(cashInput);
+        JLabel lblAmount = new JLabel("Enter Cash Amount:");
+        lblAmount.setBounds(30, 60, 200, 30);
+        cashDialog.add(lblAmount);
 
-    javax.swing.JButton btnPay = new javax.swing.JButton("Pay Now");
-    btnPay.setBounds(30, 150, 220, 40);
-    btnPay.setBackground(new java.awt.Color(0, 153, 51));
-    btnPay.setForeground(java.awt.Color.WHITE);
+        javax.swing.JTextField cashInput = new javax.swing.JTextField();
+        cashInput.setBounds(30, 90, 220, 40);
+        cashInput.setFont(new java.awt.Font("Segoe UI", 1, 18));
+        cashDialog.add(cashInput);
 
-    btnPay.addActionListener(e -> {
-    try {
-        double cashPaid = Double.parseDouble(cashInput.getText().trim());
-        if (cashPaid < totalToPay) {
-            JOptionPane.showMessageDialog(cashDialog, "Insufficient cash amount!");
-        } else {
-            saveOrderToDatabase();
-            cashDialog.dispose();
-            
-            // ✅ Show receipt
-            new reciept(
-                jTextField1.getText().trim(),
-                jTextField3.getText().trim(),
-                jTextField2.getText().trim(),
-                "Cash",
-                dashboard.CartManager.sharedModel,  // ⚠️ pass BEFORE setRowCount(0)
-                totalToPay,
-                cashPaid
-            ).setVisible(true);
-            
-            this.dispose();
-        }
-    } catch (NumberFormatException ex) {
-        JOptionPane.showMessageDialog(cashDialog, "Please enter a valid number!");
+        javax.swing.JButton btnPay = new javax.swing.JButton("Pay Now");
+        btnPay.setBounds(30, 150, 220, 40);
+        btnPay.setBackground(new java.awt.Color(0, 153, 51));
+        btnPay.setForeground(java.awt.Color.WHITE);
+
+        btnPay.addActionListener(e -> {
+            try {
+                double cashPaid = Double.parseDouble(cashInput.getText().trim());
+                if (cashPaid < totalToPay) {
+                    JOptionPane.showMessageDialog(cashDialog, "Insufficient cash amount!");
+                } else {
+                    saveOrderToDatabase();
+                    cashDialog.dispose();
+
+                    // ✅ Show receipt
+                    new reciept(
+                            jTextField1.getText().trim(),
+                            jTextField3.getText().trim(),
+                            jTextField2.getText().trim(),
+                            "Cash",
+                            dashboard.CartManager.sharedModel, // ⚠️ pass BEFORE setRowCount(0)
+                            totalToPay,
+                            cashPaid
+                    ).setVisible(true);
+
+                    this.dispose();
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(cashDialog, "Please enter a valid number!");
+            }
+        });
+
+        cashDialog.add(btnPay);
+        cashDialog.setVisible(true);
     }
-});
 
-    cashDialog.add(btnPay);
-    cashDialog.setVisible(true);
-}
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -428,11 +455,11 @@ public class checkout extends javax.swing.JFrame {
 
     private void jRadioButton1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jRadioButton1MouseClicked
         // TODO add your handling code here:
-        
+
     }//GEN-LAST:event_jRadioButton1MouseClicked
 
     private void tbl2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tbl2MouseClicked
-        
+
     }//GEN-LAST:event_tbl2MouseClicked
 
     private void jRadioButton2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jRadioButton2MouseClicked
@@ -444,38 +471,37 @@ public class checkout extends javax.swing.JFrame {
     }//GEN-LAST:event_jRadioButton3MouseClicked
 
     private void jRadioButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioButton1ActionPerformed
-     
+
     }//GEN-LAST:event_jRadioButton1ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         // TODO add your handling code here:
         String fullName = jTextField1.getText().trim();
-    String address = jTextField3.getText().trim();
-    String contact = jTextField2.getText().trim();
+        String address = jTextField3.getText().trim();
+        String contact = jTextField2.getText().trim();
 
-    if (fullName.isEmpty() || address.isEmpty() || contact.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Please fill in all fields!");
-        return;
-    }
-    if (tbl2.getRowCount() == 0) {
-        JOptionPane.showMessageDialog(this, "Cart is empty!");
-        return;
-    }
+        if (fullName.isEmpty() || address.isEmpty() || contact.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in all fields!");
+            return;
+        }
+        if (tbl2.getRowCount() == 0) {
+            JOptionPane.showMessageDialog(this, "Cart is empty!");
+            return;
+        }
 
-    if (jRadioButton1.isSelected()) {
-        showCashPopup();
-    } else if (jRadioButton2.isSelected()) {
-        saveOrderToDatabase();
-        JOptionPane.showMessageDialog(this, "Order placed via Credit Card!");
-        this.dispose();
-    } else if (jRadioButton3.isSelected()) {
-        saveOrderToDatabase();
-        JOptionPane.showMessageDialog(this, "Order placed via GCash!");
-        this.dispose();
-    }
+        if (jRadioButton1.isSelected()) {
+            showCashPopup();
+        } else if (jRadioButton2.isSelected()) {
+            saveOrderToDatabase();
+            JOptionPane.showMessageDialog(this, "Order placed via Credit Card!");
+            this.dispose();
+        } else if (jRadioButton3.isSelected()) {
+            saveOrderToDatabase();
+            JOptionPane.showMessageDialog(this, "Order placed via GCash!");
+            this.dispose();
+        }
     }//GEN-LAST:event_jButton1ActionPerformed
 
- 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;

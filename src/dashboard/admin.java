@@ -10,8 +10,18 @@ import main.landing;
 
 public class admin extends javax.swing.JFrame {
 
+    public static admin instance;
+
     public admin() {
         initComponents();
+        instance = this; // ✅ save reference
+        displayOrders();
+        displayTopSelling();
+        loadDashboardStats();
+    }
+
+    // ✅ Call this to refresh everything
+    public void refreshAll() {
         displayOrders();
         displayTopSelling();
         loadDashboardStats();

@@ -343,10 +343,15 @@ public class ManageProd extends javax.swing.JFrame {
             int row = jTable1.getSelectedRow();
     if (row == -1) return;
 
+    // ✅ Safe parsing - handles both "5" and "5.0"
     String stockStr = jTable1.getValueAt(row, 5).toString();
-    int currentStock = Integer.parseInt(stockStr);
+    int currentStock = 0;
+    try {
+        currentStock = Integer.parseInt(stockStr.split("\\.")[0]); // handles "5.0" → "5"
+    } catch (Exception e) {
+        currentStock = 0;
+    }
 
-    // ✅ Only show popup if stock is 0 OR on double click any book
     if (currentStock == 0 || evt.getClickCount() == 2) {
         String bookId = jTable1.getValueAt(row, 0).toString();
         String bookName = jTable1.getValueAt(row, 1).toString();
@@ -355,21 +360,20 @@ public class ManageProd extends javax.swing.JFrame {
     }//GEN-LAST:event_jTable1MouseClicked
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        int row = jTable1.getSelectedRow();
+          int row = jTable1.getSelectedRow();
     if (row == -1) {
         JOptionPane.showMessageDialog(this, "Please select a row to update!");
         return;
     }
 
-    // Get data from the selected row
-    String id = jTable1.getValueAt(row, 0).toString();
-    String name = jTable1.getValueAt(row, 1).toString();
+    String id     = jTable1.getValueAt(row, 0).toString();
+    String name   = jTable1.getValueAt(row, 1).toString();
     String author = jTable1.getValueAt(row, 2).toString();
-    String date = jTable1.getValueAt(row, 3).toString();
-    String price = jTable1.getValueAt(row, 4).toString();
-    String stock = jTable1.getValueAt(row, 5).toString();
+    String date   = jTable1.getValueAt(row, 3).toString();
+    String price  = jTable1.getValueAt(row, 4).toString();
+    // ✅ Clean stock value before passing
+    String stock  = jTable1.getValueAt(row, 5).toString().split("\\.")[0];
 
-    // Create window, pass 'this', and set the data
     updateProduct up = new updateProduct(this);
     up.setData(id, name, price, stock, author, date);
     up.setVisible(true);
